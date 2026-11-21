@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AcademiaFlow — Explorador Técnico & Protótipo Interativo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            slate: {
+              850: '#151e32',
+              925: '#0b1120',
+              950: '#060a14',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar & subtle animations */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.45);
+    }
+    .grid-bg {
+      background-size: 28px 28px;
+      background-image: 
+        linear-gradient(to right, rgba(16, 185, 129, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(16, 185, 129, 0.04) 1px, transparent 1px);
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      50% { transform: scale(1.05); opacity: 0.25; }
+      100% { transform: scale(0.95); opacity: 0.7; }
+    }
+    .animate-pulse-ring {
+      animation: pulse-ring 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased selection:bg-emerald-500/30 selection:text-emerald-200 transition-colors duration-200">
+
+  <!-- Toast Notification Container (No alert() used) -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-40 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 gap-4">
+        <!-- Brand -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div class="truncate">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-lg tracking-tight">AcademiaFlow</span>
+              <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                ZIP Inspector v1.0
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">SaaS Multi-Tenant Fitness • Next.js + Supabase + Asaas + Catraca</p>
+          </div>
+        </div>
+
+        <!-- Main Navigation Tabs (Desktop) -->
+        <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800" aria-label="Navegação Principal">
+          <button onclick="switchMainTab('overview')" data-tab="overview" class="main-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm">
+            1. Arquitetura
+          </button>
+          <button onclick="switchMainTab('files')" data-tab="files" class="main-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+            2. Arquivos (113)
+          </button>
+          <button onclick="switchMainTab('simulator')" data-tab="simulator" class="main-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+            3. Simulador App
+          </button>
+          <button onclick="switchMainTab('api')" data-tab="api" class="main-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+            4. API & SQL
+          </button>
+        </nav>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="toggleTheme()" title="Alternar Tema Claro/Escuro" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors">
+            <svg id="theme-icon-sun" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="5"></circle>
+              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+            <svg id="theme-icon-moon" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Bar -->
+      <div class="flex md:hidden overflow-x-auto gap-1.5 pb-2.5 pt-1 no-scrollbar">
+        <button onclick="switchMainTab('overview')" data-tab="overview" class="main-tab-btn shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          1. Arquitetura
+        </button>
+        <button onclick="switchMainTab('files')" data-tab="files" class="main-tab-btn shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400">
+          2. Arquivos (113)
+        </button>
+        <button onclick="switchMainTab('simulator')" data-tab="simulator" class="main-tab-btn shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400">
+          3. Simulador App
+        </button>
+        <button onclick="switchMainTab('api')" data-tab="api" class="main-tab-btn shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400">
+          4. API & SQL
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: VISÃO GERAL & ARQUITETURA DO PROJETO                           -->
+    <!-- ===================================================================== -->
+    <section id="tab-overview" class="tab-section space-y-8">
+      
+      <!-- Hero Banner & ZIP Metadata Strip -->
+      <div class="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 sm:p-8 shadow-sm grid-bg">
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div class="max-w-2xl space-y-3">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/20">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Engenharia Reversa de Pacote • <code class="font-mono">academiaflow.zip</code>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Plataforma SaaS Completa para Gestão de Academias, Treinos & Controle de Acesso
+            </h1>
+            <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+              Análise estrutural extraída diretamente das <strong>113 entradas</strong> do repositório. O sistema combina <strong>Next.js App Router</strong>, <strong>PWA Offline-First</strong>, isolamento multi-tenant via <strong>Supabase RLS</strong>, cobrança recorrente com <strong>Asaas</strong>, automação via <strong>WhatsApp Bot</strong> e validação local/remota de <strong>Catracas via QR Token</strong>.
+            </p>
+            <div class="pt-2 flex flex-wrap gap-3">
+              <button onclick="switchMainTab('simulator')" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Testar Protótipo Interativo
+              </button>
+              <button onclick="switchMainTab('files')" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-medium border border-slate-200 dark:border-slate-700 transition-all">
+                Inspecionar Árvore de Arquivos
+              </button>
+            </div>
+          </div>
+
+          <!-- ZIP Archive Metrics Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3 shrink-0">
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+              <span class="text-xs text-slate-500 dark:text-slate-400 block">Tamanho ZIP</span>
+              <span class="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">83.28 KB</span>
+              <span class="text-[11px] text-slate-400 font-mono">83.279 bytes</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+              <span class="text-xs text-slate-500 dark:text-slate-400 block">Descompactado</span>
+              <span class="text-xl font-bold font-mono text-cyan-600 dark:text-cyan-400">144.46 KB</span>
+              <span class="text-[11px] text-slate-400 font-mono">144.461 bytes</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+              <span class="text-xs text-slate-500 dark:text-slate-400 block">Total Entradas</span>
+              <span class="text-xl font-bold font-mono text-slate-900 dark:text-white">113</span>
+              <span class="text-[11px] text-slate-400">61 arquivos • 52 pastas</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+              <span class="text-xs text-slate-500 dark:text-slate-400 block">Compressão</span>
+              <span class="text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400">42.4%</span>
+              <span class="text-[11px] text-slate-400">Deflate ratio</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stack Tecnológica Inferida -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="w-1.5 h-5 rounded-full bg-emerald-500"></span>
+            Stack Tecnológica Inferida pelos Arquivos
+          </h2>
+          <span class="text-xs text-slate-500 dark:text-slate-400">Clique nos blocos do diagrama abaixo para inspecionar</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Card 1 -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 transition-all">
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Frontend & PWA</span>
+              <span class="text-xs font-mono text-emerald-500">Next.js App Router</span>
+            </div>
+            <h3 class="font-semibold text-base mb-1.5">Interface Mobile-First & Offline</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+              Service Worker (<code class="text-emerald-500">sw.js</code>), Web Push (<code class="text-emerald-500">PushOptIn.tsx</code>), cache offline de treinos (<code class="text-emerald-500">offline.ts</code>) e rota de fallback (<code class="text-emerald-500">/offline</code>).
+            </p>
+            <div class="flex flex-wrap gap-1.5 text-[11px] font-mono">
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">TypeScript</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">Tailwind CSS</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">manifest.json</span>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 transition-all">
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">Backend & Data</span>
+              <span class="text-xs font-mono text-cyan-500">Supabase + RLS</span>
+            </div>
+            <h3 class="font-semibold text-base mb-1.5">Multi-Tenancy & LGPD Nativa</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+              6 migrations SQL progressivas com Row Level Security (<code class="text-cyan-500">0001_schema_rls.sql</code>), views de KPIs (<code class="text-cyan-500">0006_kpis.sql</code>), consentimento (<code class="text-cyan-500">/consent</code>) e anonimização (<code class="text-cyan-500">/anonymize</code>).
+            </p>
+            <div class="flex flex-wrap gap-1.5 text-[11px] font-mono">
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">PostgreSQL</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">RLS Policies</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">CSV Import</span>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 transition-all">
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">Integrações & Hardware</span>
+              <span class="text-xs font-mono text-indigo-500">Asaas • WhatsApp • Catraca</span>
+            </div>
+            <h3 class="font-semibold text-base mb-1.5">Automação Financeira & Controle Físico</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+              Gateway <code class="text-indigo-400">asaas.ts</code> + Cron diário (<code class="text-indigo-400">vercel.json</code>), Bot de atendimento (<code class="text-indigo-400">bot.ts</code>) e validação híbrida de catraca com snapshot offline (<code class="text-indigo-400">gate.ts</code>).
+            </p>
+            <div class="flex flex-wrap gap-1.5 text-[11px] font-mono">
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">QR Tokens</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">Webhooks</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">Vercel Cron</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagrama Visual Interativo da Arquitetura -->
+      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">Diagrama Interativo de Fluxo & Arquitetura</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Selecione qualquer camada ou módulo abaixo para ver os arquivos envolvidos e o fluxo de dados.</p>
+          </div>
+          <span id="arch-active-badge" class="px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 self-start">
+            Módulo: Controle de Acesso & Catraca
+          </span>
+        </div>
+
+        <!-- Visual Nodes Diagram -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-stretch mb-6">
+          
+          <!-- Layer 1: Clients / Portals -->
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3">
+            <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">1. Camada Cliente (PWA)</div>
+            <div class="space-y-2">
+              <button onclick="selectArchNode('pwa-student')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">App do Aluno</div>
+                <div class="text-[11px] font-mono text-slate-500">/treino • /qr • /pagamento</div>
+              </button>
+              <button onclick="selectArchNode('pwa-admin')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Painel Admin & Personal</div>
+                <div class="text-[11px] font-mono text-slate-500">/admin/* • /trainer/[id]</div>
+              </button>
+              <button onclick="selectArchNode('onboarding-flow')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Onboarding & LGPD</div>
+                <div class="text-[11px] font-mono text-slate-500">/onboarding • /consent</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Layer 2: Next.js API Routes -->
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3">
+            <div class="text-[11px] font-mono uppercase tracking-wider text-cyan-500 font-semibold">2. Next.js API Routes</div>
+            <div class="space-y-2">
+              <button onclick="selectArchNode('access-control')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border-2 border-emerald-500 bg-emerald-500/5 transition-all">
+                <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400">Endpoints de Catraca</div>
+                <div class="text-[11px] font-mono text-slate-500">/api/access/{token,validate,snapshot,override}</div>
+              </button>
+              <button onclick="selectArchNode('students-billing')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-cyan-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Gestão & Cobrança</div>
+                <div class="text-[11px] font-mono text-slate-500">/api/subscriptions • /cron/billing</div>
+              </button>
+              <button onclick="selectArchNode('webhooks-hub')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-cyan-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Webhooks Multi-Tenant</div>
+                <div class="text-[11px] font-mono text-slate-500">/webhooks/{payments,whatsapp}/[tenantId]</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Layer 3: Domain Libs -->
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3">
+            <div class="text-[11px] font-mono uppercase tracking-wider text-indigo-400 font-semibold">3. Camada de Domínio (src/lib)</div>
+            <div class="space-y-2">
+              <button onclick="selectArchNode('access-control')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Motor de Acesso & Tokens</div>
+                <div class="text-[11px] font-mono text-slate-500">access.ts • accessToken.ts • gate.ts</div>
+              </button>
+              <button onclick="selectArchNode('asaas-billing')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Gateway Asaas & Régua</div>
+                <div class="text-[11px] font-mono text-slate-500">gateway/asaas.ts • billing.ts</div>
+              </button>
+              <button onclick="selectArchNode('whatsapp-bot')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Bot & Notificações</div>
+                <div class="text-[11px] font-mono text-slate-500">bot.ts • whatsapp.ts • push.ts</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Layer 4: Persistence & External -->
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3">
+            <div class="text-[11px] font-mono uppercase tracking-wider text-amber-500 font-semibold">4. Dados & Serviços Externos</div>
+            <div class="space-y-2">
+              <button onclick="selectArchNode('supabase-rls')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Supabase PostgreSQL</div>
+                <div class="text-[11px] font-mono text-slate-500">6 Migrations • RLS • KPI Views</div>
+              </button>
+              <button onclick="selectArchNode('asaas-billing')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">API Asaas & WhatsApp</div>
+                <div class="text-[11px] font-mono text-slate-500">Pix/Boleto/Cartão & Mensageria</div>
+              </button>
+              <button onclick="selectArchNode('access-control')" class="arch-node-btn w-full text-left p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-500 transition-all">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-100">Controladora de Catraca</div>
+                <div class="text-[11px] font-mono text-slate-500">Leitor QR + Snapshot Local</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Architecture Inspector Detail Box -->
+        <div id="arch-detail-panel" class="p-5 rounded-xl bg-slate-100/80 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: EXPLORADOR DE ARQUIVOS (113 ENTRADAS DO ZIP)                   -->
+    <!-- ===================================================================== -->
+    <section id="tab-files" class="tab-section hidden space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white">Explorador Completo do Arquivo ZIP</h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Navegue pelas 113 entradas (diretórios e arquivos), filtre por extensão e inspecione a função e código inferido de cada módulo.</p>
+        </div>
+
+        <!-- Search & Extension Filter -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative flex-1 sm:w-64">
+            <input id="file-search-input" type="text" placeholder="Buscar caminho ou arquivo..." oninput="filterFiles()" class="w-full pl-9 pr-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-emerald-500" />
+            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35"></path></svg>
+          </div>
+          <select id="file-ext-filter" onchange="filterFiles()" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-emerald-500">
+            <option value="all">Todos os tipos (61 arq.)</option>
+            <option value=".tsx">Páginas & UI (.tsx)</option>
+            <option value=".ts">APIs & Libs (.ts)</option>
+            <option value=".sql">Migrations (.sql)</option>
+            <option value=".js">Scripts & Config (.js/.mjs)</option>
+            <option value=".json">Config & Manifest (.json)</option>
+            <option value="other">Outros (.md, .csv, .png)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Split Pane: File Tree + File Inspector -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left: File Tree List -->
+        <div class="lg:col-span-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+          <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
+            <span class="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300">academiaflow/</span>
+            <span id="file-count-label" class="text-xs font-mono text-emerald-600 dark:text-emerald-400">113 entradas</span>
+          </div>
+          <div id="file-tree-container" class="max-h-[600px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-xs">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Right: File Inspector & Simulated Source Preview -->
+        <div class="lg:col-span-7 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm sticky top-20">
+          <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex flex-wrap items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span id="inspector-badge" class="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">SQL</span>
+                <h3 id="inspector-filename" class="font-mono font-bold text-sm text-slate-900 dark:text-white truncate">academiaflow/supabase/migrations/0001_schema_rls.sql</h3>
+              </div>
+              <p id="inspector-size" class="text-xs text-slate-500 mt-0.5">Tamanho no ZIP: 6.880 bytes • Camada de Banco de Dados</p>
+            </div>
+            <button onclick="copyInspectorCode()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200/70 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path></svg>
+              Copiar Trecho
+            </button>
+          </div>
+
+          <div class="p-5 space-y-4">
+            <!-- Purpose Description -->
+            <div class="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">Papel Arquitetural & Responsabilidade</h4>
+              <p id="inspector-desc" class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                Define o schema relacional multi-tenant (tenants, profiles, students, plans, subscriptions, workouts, access_logs) e ativa Row Level Security (RLS) garantindo isolamento total entre academias.
+              </p>
+            </div>
+
+            <!-- Related Dependencies -->
+            <div>
+              <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">Conexões no Projeto:</span>
+              <div id="inspector-relations" class="flex flex-wrap gap-1.5">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+
+            <!-- Simulated Code / Structure Preview -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Estrutura / Implementação Reconstruída</span>
+                <span class="text-[11px] font-mono text-slate-400">Preview Técnico</span>
+              </div>
+              <pre class="p-4 rounded-xl bg-slate-950 text-slate-200 font-mono text-xs leading-relaxed overflow-x-auto max-h-[340px] border border-slate-800"><code id="inspector-code"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: SIMULADOR INTERATIVO DAS TELAS DO ACADEMIAFLOW                 -->
+    <!-- ===================================================================== -->
+    <section id="tab-simulator" class="tab-section hidden space-y-6">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white">Simulador Interativo das Rotas do App</h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Experimente os fluxos funcionais construídos sobre as rotas reais encontradas em <code class="font-mono text-emerald-500">src/app/</code>.</p>
+        </div>
+
+        <!-- Simulator Screen Switcher -->
+        <div class="flex flex-wrap gap-2">
+          <button onclick="switchSimScreen('student')" data-sim="student" class="sim-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-md shadow-emerald-600/20 transition-all">
+            📱 Aluno (/treino & /qr)
+          </button>
+          <button onclick="switchSimScreen('admin')" data-sim="admin" class="sim-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition-all">
+            🏢 Admin (/admin/*)
+          </button>
+          <button onclick="switchSimScreen('trainer')" data-sim="trainer" class="sim-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition-all">
+            🏋️ Personal (/trainer/[id])
+          </button>
+          <button onclick="switchSimScreen('onboarding')" data-sim="onboarding" class="sim-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition-all">
+            🚀 Onboarding & Checkout
+          </button>
+        </div>
+      </div>
+
+      <!-- Browser / Device Frame Wrapper -->
+      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden">
+        <!-- Mock Browser Top Bar -->
+        <div class="px-4 py-2.5 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
+            <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
+            <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+          </div>
+          <div class="flex-1 max-w-md px-3 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center justify-between">
+            <span id="sim-url-bar">https://app.academiaflow.com.br/treino</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500">PWA Ready</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="toggleSimOffline()" id="sim-offline-toggle" class="px-2.5 py-1 rounded-lg text-[11px] font-mono bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              ● Online (SW Ativo)
+            </button>
+          </div>
+        </div>
+
+        <!-- SCREEN 1: PORTAL DO ALUNO (/treino & /qr) -->
+        <div id="sim-screen-student" class="sim-screen p-4 sm:p-6 bg-slate-50 dark:bg-slate-950/50">
+          <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
+            
+            <!-- Left Column: Dynamic QR Code Access (/qr + accessToken.ts) -->
+            <div class="md:col-span-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 flex flex-col items-center text-center shadow-sm">
+              <div class="w-full flex items-center justify-between mb-3">
+                <span class="text-xs font-mono text-slate-400">Rota: /qr</span>
+                <span id="student-access-badge" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                  Acesso Liberado
+                </span>
+              </div>
+              
+              <h3 class="font-bold text-base">Passe Digital de Catraca</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 mb-4">Token TOTP dinâmico gerado via <code class="font-mono text-emerald-500">accessToken.ts</code></p>
+
+              <!-- Dynamic SVG QR Code Visual -->
+              <div class="relative p-4 rounded-2xl bg-white border-2 border-emerald-500/40 shadow-inner mb-4">
+                <div class="absolute inset-0 rounded-2xl border-2 border-emerald-500/30 animate-pulse-ring pointer-events-none"></div>
+                <svg id="dynamic-qr-svg" class="w-40 h-40 text-slate-900" viewBox="0 0 100 100" fill="currentColor">
+                  <!-- Generated dynamically -->
+                </svg>
+              </div>
+
+              <!-- Countdown Timer -->
+              <div class="w-full space-y-1.5 mb-4">
+                <div class="flex justify-between text-xs font-mono">
+                  <span class="text-slate-500">Token: <strong id="qr-token-code" class="text-slate-800 dark:text-slate-200">AF-8942-X9</strong></span>
+                  <span class="text-emerald-600 dark:text-emerald-400 font-bold"><span id="qr-timer">30</span>s</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div id="qr-progress-bar" class="h-full bg-emerald-500 transition-all duration-1000" style="width: 100%"></div>
+                </div>
+              </div>
+
+              <div class="flex gap-2 w-full">
+                <button onclick="regenerateQrToken()" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  Renovar Token
+                </button>
+                <button onclick="simulateGatePass()" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-colors">
+                  Simular Catraca
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Column: Workout Sheet (/treino + offline.ts) -->
+            <div class="md:col-span-7 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <span class="text-xs font-mono text-slate-400">Rota: /treino • Ficha A (Hipertrofia)</span>
+                    <h3 class="font-bold text-lg">Treino de Hoje — Peito & Tríceps</h3>
+                  </div>
+                  <span id="workout-progress-pill" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+                    1/4 Concluídos
+                  </span>
+                </div>
+
+                <!-- Exercise Checklist -->
+                <div id="student-exercises-list" class="space-y-2.5 my-4">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span class="text-slate-500 flex items-center gap-1.5">
+                  <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
+                  Sincronizado em IndexedDB (<code class="font-mono">lib/offline.ts</code>)
+                </span>
+                <button onclick="finishWorkoutSession()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition-colors">
+                  Finalizar Treino
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- SCREEN 2: PAINEL ADMINISTRATIVO (/admin, /alunos, /acesso, /cobranca) -->
+        <div id="sim-screen-admin" class="sim-screen hidden p-4 sm:p-6 bg-slate-50 dark:bg-slate-950/50 space-y-6">
+          
+          <!-- KPI Row (0006_kpis.sql) -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <span class="text-xs text-slate-500">Alunos Ativos</span>
+              <div class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1" id="kpi-active-students">342</div>
+              <span class="text-[11px] text-emerald-500 font-medium">+14 este mês (view_kpis)</span>
+            </div>
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <span class="text-xs text-slate-500">MRR Recorrente (Asaas)</span>
+              <div class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">R$ 44.118</div>
+              <span class="text-[11px] text-slate-400">96.4% adimplência</span>
+            </div>
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <span class="text-xs text-slate-500">Acessos Catraca Hoje</span>
+              <div class="text-2xl font-extrabold text-cyan-600 dark:text-cyan-400 mt-1" id="kpi-gate-entries">189</div>
+              <span class="text-[11px] text-slate-400">Snapshot sync: há 2 min</span>
+            </div>
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <span class="text-xs text-slate-500">Inadimplentes / Bloqueados</span>
+              <div class="text-2xl font-extrabold text-rose-500 mt-1">12</div>
+              <span class="text-[11px] text-slate-400">Régua WhatsApp ativa</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Gestão de Alunos & LGPD (/admin/alunos) -->
+            <div class="lg:col-span-7 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div>
+                  <h3 class="font-bold text-base">Gestão de Alunos & Conformidade LGPD</h3>
+                  <p class="text-xs text-slate-500">Endpoints: <code class="font-mono">/api/students/[id]/pause</code> & <code class="font-mono">/anonymize</code></p>
+                </div>
+                <button onclick="simulateCsvImport()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700">
+                  + Importar CSV
+                </button>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400">
+                      <th class="pb-2.5 font-medium">Aluno</th>
+                      <th class="pb-2.5 font-medium">Plano / Asaas</th>
+                      <th class="pb-2.5 font-medium">Status</th>
+                      <th class="pb-2.5 font-medium text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-students-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Monitor de Catraca & Override (/admin/acesso) -->
+            <div class="lg:col-span-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="font-bold text-base">Monitor de Catraca (/admin/acesso)</h3>
+                  <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 text-emerald-500">ONLINE</span>
+                </div>
+                <p class="text-xs text-slate-500 mb-4">Logs em tempo real e liberação manual via <code class="font-mono">/api/access/override</code>.</p>
+
+                <div id="gate-logs-feed" class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+                <button onclick="triggerManualGateOverride()" class="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all">
+                  🔓 Liberar Catraca Manualmente (Override)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 3: PAINEL DO PERSONAL (/trainer & /trainer/[id]) -->
+        <div id="sim-screen-trainer" class="sim-screen hidden p-4 sm:p-6 bg-slate-50 dark:bg-slate-950/50">
+          <div class="max-w-4xl mx-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <span class="text-xs font-mono text-cyan-500">Rota: /trainer/usr_9821a • Prescrição de Treino</span>
+                <h3 class="font-bold text-lg">Editor de Ficha — Mariana Costa (Objetivo: Condicionamento)</h3>
+              </div>
+              <span class="text-xs text-slate-400 font-mono">Trigger: 0003_workouts_updated_at.sql</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
+              <input id="new-ex-name" type="text" placeholder="Nome do exercício (ex: Agachamento Livre)" class="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800" />
+              <input id="new-ex-sets" type="text" placeholder="Séries x Reps (ex: 4x12)" class="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800" />
+              <button onclick="addTrainerExercise()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors">
+                + Adicionar Exercício
+              </button>
+            </div>
+
+            <div id="trainer-workout-list" class="space-y-2">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 4: ONBOARDING, CONSENTIMENTO LGPD & PAGAMENTO (/onboarding, /consent, /pagamento) -->
+        <div id="sim-screen-onboarding" class="sim-screen hidden p-4 sm:p-6 bg-slate-50 dark:bg-slate-950/50">
+          <div class="max-w-xl mx-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-emerald-500">Fluxo: /onboarding → /consent → /pagamento</span>
+              <span class="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[11px] font-mono">Asaas Checkout</span>
+            </div>
+            <h3 class="text-lg font-bold">Matrícula Digital & Assinatura Recorrente</h3>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Nome Completo do Aluno</label>
+                <input id="onb-name" type="text" value="Lucas Mendes" class="w-full px-3.5 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 mb-1">WhatsApp</label>
+                  <input type="text" value="(31) 99876-5432" class="w-full px-3.5 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-500 mb-1">Plano Selecionado</label>
+                  <select class="w-full px-3.5 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <option>Plano Black Mensal — R$ 129,90</option>
+                    <option>Plano Trimestral — R$ 349,00</option>
+                    <option>Plano Anual VIP — R$ 1.190,00</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- LGPD Consent (/consent) -->
+              <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
+                <input id="onb-lgpd-check" type="checkbox" checked class="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500" />
+                <span class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Li e aceito o <strong>Termo de Consentimento LGPD (<code class="font-mono">/consent</code>)</strong> para tratamento de dados biométricos/acesso e cobrança recorrente via gateway Asaas.
+                </span>
+              </label>
+            </div>
+
+            <button onclick="completeOnboardingFlow()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all">
+              Gerar Link de Pagamento Asaas & Liberar Acesso
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 4: MAPA DE ENDPOINTS DA API & MIGRATIONS SQL                      -->
+    <!-- ===================================================================== -->
+    <section id="tab-api" class="tab-section hidden space-y-8">
+      
+      <!-- API Endpoints Section -->
+      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">Mapa Completo de Endpoints da API (<code class="font-mono text-emerald-500">src/app/api/</code>)</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Todas as 13 rotas server-side identificadas no pacote ZIP com seus métodos, payloads e responsabilidades.</p>
+          </div>
+          <div class="flex gap-1.5">
+            <button onclick="filterApiCategory('all')" class="api-cat-btn px-3 py-1 rounded-lg text-xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">Todas (13)</button>
+            <button onclick="filterApiCategory('access')" class="api-cat-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Catraca (4)</button>
+            <button onclick="filterApiCategory('billing')" class="api-cat-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Financeiro (3)</button>
+            <button onclick="filterApiCategory('webhooks')" class="api-cat-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Webhooks (2)</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                <th class="pb-3 font-semibold">Método</th>
+                <th class="pb-3 font-semibold">Rota / Endpoint</th>
+                <th class="pb-3 font-semibold">Arquivo Fonte</th>
+                <th class="pb-3 font-semibold">Descrição Funcional</th>
+              </tr>
+            </thead>
+            <tbody id="api-endpoints-tbody" class="divide-y divide-slate-100 dark:divide-slate-800/80">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Supabase Migrations Timeline -->
+      <div>
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <span class="w-1.5 h-5 rounded-full bg-cyan-500"></span>
+          Evolução do Banco de Dados — Supabase Migrations (<code class="font-mono text-sm">0001</code> a <code class="font-mono text-sm">0006</code>)
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="migrations-grid">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-slate-800/80 mt-12 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+    <p>AcademiaFlow Architecture Explorer • Gerado a partir dos metadados do pacote <code class="font-mono">academiaflow.zip</code> (113 entradas • 144.461 bytes).</p>
+  </footer>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT LOGIC & COMPLETE REPOSITORY METADATA                       -->
+  <!-- ===================================================================== -->
+  <script>
+    // 1. COMPLETE ZIP ENTRIES DATASET (All 113 entries from user prompt)
+    const zipEntries = [
+      { path: "academiaflow/", type: "dir", size: 0, desc: "Diretório raiz do projeto Next.js Multi-Tenant." },
+      { path: "academiaflow/.env.example", type: "file", size: 743, desc: "Template de variáveis de ambiente: chaves Supabase (URL, Anon, Service Role), API Key Asaas, Token WhatsApp e VAPID keys para Web Push.", code: "NEXT_PUBLIC_SUPABASE_URL=https://xyz.supabase.co\nNEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...\nSUPABASE_SERVICE_ROLE_KEY=eyJ...\nASAAS_API_KEY=$aact_...\nASAAS_WEBHOOK_TOKEN=whsec_...\nWHATSAPP_VERIFY_TOKEN=af_wa_token\nNEXT_PUBLIC_VAPID_PUBLIC_KEY=BEl6...\nVAPID_PRIVATE_KEY=..." },
+      { path: "academiaflow/.gitignore", type: "file", size: 36, desc: "Regras de exclusão Git (.next, node_modules, .env).", code: "node_modules/\n.next/\n.env*\n.vercel/" },
+      { path: "academiaflow/README.md", type: "file", size: 12630, desc: "Documentação técnica extensa (12.6 KB) detalhando setup, arquitetura multi-tenant, configuração de catracas, webhooks Asaas/WhatsApp e conformidade LGPD.", code: "# AcademiaFlow — SaaS Gestão Fitness & Controle de Acesso\n\n## Arquitetura Multi-Tenant\nIsolamento estrito por `tenant_id` usando Supabase Row Level Security (RLS).\n\n## Módulos Principais\n1. Portal PWA do Aluno (/treino, /qr)\n2. Painel Administrativo (/admin)\n3. Portal do Personal (/trainer)\n4. Integração Financeira Asaas + Régua WhatsApp\n5. Controle de Catraca Offline-First (/api/access/*)" },
+      { path: "academiaflow/exemplo-alunos.csv", type: "file", size: 120, desc: "Arquivo modelo CSV para importação em lote de alunos via /api/import-students.", code: "nome,email,telefone,cpf,plano\nJoão Silva,joao@email.com,31999990001,12345678901,Mensal\nMaria Oliveira,maria@email.com,31999990002,98765432100,Anual" },
+      { path: "academiaflow/next.config.js", type: "file", size: 85, desc: "Configuração do Next.js App Router.", code: "/** @type {import('next').NextConfig} */\nconst nextConfig = { reactStrictMode: true };\nmodule.exports = nextConfig;" },
+      { path: "academiaflow/package.json", type: "file", size: 692, desc: "Dependências do projeto: Next.js, React, @supabase/supabase-js, web-push, Tailwind CSS e scripts de verificação.", code: '{\n  "name": "academiaflow",\n  "version": "1.0.0",\n  "scripts": {\n    "dev": "next dev",\n    "build": "next build",\n    "verify": "node scripts/verify.mjs"\n  },\n  "dependencies": {\n    "next": "^14.2.0",\n    "react": "^18.3.0",\n    "@supabase/supabase-js": "^2.43.0",\n    "web-push": "^3.6.7"\n  }\n}' },
+      { path: "academiaflow/postcss.config.js", type: "file", size: 69, desc: "Configuração PostCSS para compilação do Tailwind CSS.", code: "module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };" },
+      { path: "academiaflow/public/", type: "dir", size: 0, desc: "Assets estáticos públicos e arquivos PWA." },
+      { path: "academiaflow/public/icons/", type: "dir", size: 0, desc: "Ícones instaláveis do Progressive Web App." },
+      { path: "academiaflow/public/icons/icon-192.png", type: "file", size: 6363, desc: "Ícone PWA 192x192px para tela inicial mobile.", code: "[Binary PNG Asset — 192x192px • 6.363 bytes]" },
+      { path: "academiaflow/public/icons/icon-512.png", type: "file", size: 7970, desc: "Ícone PWA 512x512px para splash screen e instalação.", code: "[Binary PNG Asset — 512x512px • 7.970 bytes]" },
+      { path: "academiaflow/public/manifest.json", type: "file", size: 475, desc: "Manifesto Web App configurando nome, tema, display standalone e ícones.", code: '{\n  "name": "AcademiaFlow",\n  "short_name": "AcademiaFlow",\n  "start_url": "/treino",\n  "display": "standalone",\n  "background_color": "#090d16",\n  "theme_color": "#10b981"\n}' },
+      { path: "academiaflow/public/sw.js", type: "file", size: 1884, desc: "Service Worker responsável pelo cache offline de rotas críticas (/treino, /qr, /offline) e recepção de notificações Web Push.", code: "const CACHE_NAME = 'academiaflow-v1';\nconst OFFLINE_URL = '/offline';\n\nself.addEventListener('fetch', (event) => {\n  event.respondWith(\n    fetch(event.request).catch(() => caches.match(event.request).then(r => r || caches.match(OFFLINE_URL)))\n  );\n});\n\nself.addEventListener('push', (event) => {\n  const data = event.data?.json() || { title: 'AcademiaFlow' };\n  event.waitUntil(self.registration.showNotification(data.title, { body: data.body }));\n});" },
+      { path: "academiaflow/scripts/", type: "dir", size: 0, desc: "Scripts utilitários de CI/CD e auditoria." },
+      { path: "academiaflow/scripts/verify.mjs", type: "file", size: 6328, desc: "Script automatizado de verificação de integridade (6.3 KB): valida variáveis de ambiente, migrations SQL, rotas de API e políticas RLS.", code: "// scripts/verify.mjs\nimport fs from 'node:fs';\nconsole.log('Verificando integridade do pacote AcademiaFlow...');\nconst requiredMigrations = ['0001_schema_rls.sql', '0005_access_control.sql', '0006_kpis.sql'];\n// Checa existência de rotas e políticas RLS..." },
+      { path: "academiaflow/src/", type: "dir", size: 0, desc: "Código-fonte principal da aplicação." },
+      { path: "academiaflow/src/app/", type: "dir", size: 0, desc: "Rotas e layouts do Next.js App Router." },
+      { path: "academiaflow/src/app/admin/", type: "dir", size: 0, desc: "Módulo administrativo da academia (protegido por role admin)." },
+      { path: "academiaflow/src/app/admin/acesso/", type: "dir", size: 0, desc: "Sub-rota de monitoramento de catraca." },
+      { path: "academiaflow/src/app/admin/acesso/page.tsx", type: "file", size: 4239, desc: "Dashboard em tempo real de entradas/saídas na catraca, status de sincronização de snapshot e botão de liberação manual (override).", code: "export default function AdminAcessoPage() {\n  // Lista logs de access_logs e permite POST /api/access/override\n  return <GateMonitorDashboard />;\n}" },
+      { path: "academiaflow/src/app/admin/alunos/", type: "dir", size: 0, desc: "Sub-rota de gestão de alunos." },
+      { path: "academiaflow/src/app/admin/alunos/page.tsx", type: "file", size: 3186, desc: "Listagem de alunos com busca, importação CSV, pausa de matrícula e anonimização LGPD.", code: "export default function AdminAlunosPage() {\n  // Integra /api/import-students, /pause e /anonymize\n  return <StudentsManagementTable />;\n}" },
+      { path: "academiaflow/src/app/admin/cobranca/", type: "dir", size: 0, desc: "Sub-rota de gestão financeira." },
+      { path: "academiaflow/src/app/admin/cobranca/page.tsx", type: "file", size: 3754, desc: "Painel de assinaturas Asaas, faturas vencidas, geração de links de pagamento e disparo manual de régua.", code: "export default function AdminCobrancaPage() {\n  // Exibe status Asaas e dispara /api/payment-link\n  return <BillingDashboard />;\n}" },
+      { path: "academiaflow/src/app/admin/page.tsx", type: "file", size: 2342, desc: "Visão executiva do administrador com KPIs extraídos da view SQL 0006_kpis.sql.", code: "export default async function AdminHomePage() {\n  // Consulta view tenant_kpis no Supabase\n  return <KpiOverviewGrid />;\n}" },
+      { path: "academiaflow/src/app/api/", type: "dir", size: 0, desc: "Endpoints REST / Route Handlers do Next.js." },
+      { path: "academiaflow/src/app/api/access/", type: "dir", size: 0, desc: "APIs de controle de acesso físico e catracas." },
+      { path: "academiaflow/src/app/api/access/override/", type: "dir", size: 0, desc: "Endpoint de abertura manual de catraca." },
+      { path: "academiaflow/src/app/api/access/override/route.ts", type: "file", size: 1520, desc: "POST: Registra log de auditoria e envia comando de abertura manual da catraca pelo recepcionista/admin.", code: "export async function POST(req: Request) {\n  const { tenantId, reason, staffId } = await req.json();\n  // Registra em access_logs com method='MANUAL_OVERRIDE'\n  return Response.json({ unlocked: true });\n}" },
+      { path: "academiaflow/src/app/api/access/snapshot/", type: "dir", size: 0, desc: "Endpoint de sincronização offline de catraca." },
+      { path: "academiaflow/src/app/api/access/snapshot/[tenantId]/", type: "dir", size: 0, desc: "Rota parametrizada por tenantId." },
+      { path: "academiaflow/src/app/api/access/snapshot/[tenantId]/route.ts", type: "file", size: 1757, desc: "GET: Exporta snapshot criptografado de alunos ativos para a controladora física operar mesmo sem internet.", code: "export async function GET(_: Request, { params }: { params: { tenantId: string } }) {\n  // Retorna hash e lista de tokens ativos para cache na catraca\n  return Response.json({ tenantId: params.tenantId, activeTokens: [] });\n}" },
+      { path: "academiaflow/src/app/api/access/token/", type: "dir", size: 0, desc: "Endpoint de emissão de token QR." },
+      { path: "academiaflow/src/app/api/access/token/route.ts", type: "file", size: 754, desc: "GET/POST: Gera token efêmero assinado (HMAC/TOTP) para exibição no QR Code do aluno.", code: "export async function POST(req: Request) {\n  // Usa lib/accessToken.ts para assinar token com TTL de 30s\n  return Response.json({ token: 'AF-...', expiresIn: 30 });\n}" },
+      { path: "academiaflow/src/app/api/access/validate/", type: "dir", size: 0, desc: "Endpoint de validação online da catraca." },
+      { path: "academiaflow/src/app/api/access/validate/[tenantId]/", type: "dir", size: 0, desc: "Rota parametrizada por tenantId." },
+      { path: "academiaflow/src/app/api/access/validate/[tenantId]/route.ts", type: "file", size: 1250, desc: "POST: Valida QR Code lido na catraca verificando assinatura, status financeiro e regras de horário.", code: "export async function POST(req: Request, { params }: { params: { tenantId: string } }) {\n  // Chama lib/access.ts -> validateAccess()\n  return Response.json({ allow: true, studentName: 'Ana' });\n}" },
+      { path: "academiaflow/src/app/api/cron/", type: "dir", size: 0, desc: "Jobs agendados (Vercel Cron)." },
+      { path: "academiaflow/src/app/api/cron/billing/", type: "dir", size: 0, desc: "Cron de régua de cobrança." },
+      { path: "academiaflow/src/app/api/cron/billing/route.ts", type: "file", size: 373, desc: "GET: Executado diariamente via vercel.json para processar vencimentos, bloquear inadimplentes e disparar lembretes WhatsApp/Push.", code: "export async function GET(req: Request) {\n  await runDailyBillingCycle();\n  return Response.json({ ok: true });\n}" },
+      { path: "academiaflow/src/app/api/import-students/", type: "dir", size: 0, desc: "Endpoint de importação CSV." },
+      { path: "academiaflow/src/app/api/import-students/route.ts", type: "file", size: 2193, desc: "POST: Faz parse de arquivo CSV usando lib/csv.ts e insere alunos em lote no tenant autenticado.", code: "export async function POST(req: Request) {\n  const csvText = await req.text();\n  const rows = parseStudentsCsv(csvText);\n  // Upsert no Supabase\n  return Response.json({ imported: rows.length });\n}" },
+      { path: "academiaflow/src/app/api/payment-link/", type: "dir", size: 0, desc: "Endpoint de geração de cobrança avulsa/assinatura." },
+      { path: "academiaflow/src/app/api/payment-link/route.ts", type: "file", size: 918, desc: "POST: Cria cobrança no gateway Asaas e retorna URL de checkout Pix/Boleto/Cartão.", code: "export async function POST(req: Request) {\n  const link = await createAsaasPaymentLink(await req.json());\n  return Response.json({ url: link });\n}" },
+      { path: "academiaflow/src/app/api/students/", type: "dir", size: 0, desc: "Operações específicas por aluno." },
+      { path: "academiaflow/src/app/api/students/[id]/", type: "dir", size: 0, desc: "Sub-rotas por ID do aluno." },
+      { path: "academiaflow/src/app/api/students/[id]/anonymize/", type: "dir", size: 0, desc: "Endpoint LGPD de direito ao esquecimento." },
+      { path: "academiaflow/src/app/api/students/[id]/anonymize/route.ts", type: "file", size: 2108, desc: "POST: Executa anonimização irreversível de PII (nome, CPF, telefone, e-mail) preservando integridade fiscal e logs agregados (LGPD Art. 16/18).", code: "export async function POST(_: Request, { params }: { params: { id: string } }) {\n  // Substitui dados pessoais por hash anônimo e revoga tokens\n  return Response.json({ anonymized: true, id: params.id });\n}" },
+      { path: "academiaflow/src/app/api/students/[id]/pause/", type: "dir", size: 0, desc: "Endpoint de trancamento de matrícula." },
+      { path: "academiaflow/src/app/api/students/[id]/pause/route.ts", type: "file", size: 1459, desc: "POST: Pausa assinatura do aluno (férias/atestado), suspende cobrança no Asaas e bloqueia catraca temporariamente.", code: "export async function POST(req: Request, { params }: { params: { id: string } }) {\n  // Atualiza status='PAUSED' e suspende assinatura Asaas\n  return Response.json({ paused: true });\n}" },
+      { path: "academiaflow/src/app/api/subscriptions/", type: "dir", size: 0, desc: "Endpoint de gestão de assinaturas." },
+      { path: "academiaflow/src/app/api/subscriptions/route.ts", type: "file", size: 2380, desc: "POST/PATCH: Cria ou atualiza planos recorrentes vinculando cliente local ao customer_id do Asaas.", code: "export async function POST(req: Request) {\n  // Cria customer e subscription no Asaas + salva no Supabase\n  return Response.json({ subscriptionId: 'sub_...' });\n}" },
+      { path: "academiaflow/src/app/api/webhooks/", type: "dir", size: 0, desc: "Receptores de eventos externos." },
+      { path: "academiaflow/src/app/api/webhooks/payments/", type: "dir", size: 0, desc: "Webhook financeiro Asaas." },
+      { path: "academiaflow/src/app/api/webhooks/payments/[tenantId]/", type: "dir", size: 0, desc: "Isolamento por tenantId no webhook." },
+      { path: "academiaflow/src/app/api/webhooks/payments/[tenantId]/route.ts", type: "file", size: 1708, desc: "POST: Recebe eventos PAYMENT_CONFIRMED / PAYMENT_OVERDUE do Asaas, libera ou bloqueia acesso na catraca automaticamente.", code: "export async function POST(req: Request, { params }: { params: { tenantId: string } }) {\n  const event = await req.json();\n  if (event.event === 'PAYMENT_CONFIRMED') { /* Libera acesso */ }\n  return Response.json({ received: true });\n}" },
+      { path: "academiaflow/src/app/api/webhooks/whatsapp/", type: "dir", size: 0, desc: "Webhook conversacional WhatsApp." },
+      { path: "academiaflow/src/app/api/webhooks/whatsapp/[tenantId]/", type: "dir", size: 0, desc: "Isolamento por tenantId no webhook WhatsApp." },
+      { path: "academiaflow/src/app/api/webhooks/whatsapp/[tenantId]/route.ts", type: "file", size: 1784, desc: "GET/POST: Recebe mensagens dos alunos no WhatsApp e delega processamento para lib/bot.ts (2ª via de boleto, treino, QR).", code: "export async function POST(req: Request, { params }: { params: { tenantId: string } }) {\n  const reply = await handleWhatsappBotMessage(params.tenantId, await req.json());\n  return Response.json({ reply });\n}" },
+      { path: "academiaflow/src/app/consent/", type: "dir", size: 0, desc: "Página de termo LGPD." },
+      { path: "academiaflow/src/app/consent/page.tsx", type: "file", size: 1760, desc: "Tela dedicada para aceite formal dos termos de privacidade e registro de timestamp/IP de consentimento.", code: "export default function ConsentPage() {\n  return <LgpdConsentForm />;\n}" },
+      { path: "academiaflow/src/app/globals.css", type: "file", size: 152, desc: "Diretivas base do Tailwind CSS.", code: "@tailwind base;\n@tailwind components;\n@tailwind utilities;" },
+      { path: "academiaflow/src/app/layout.tsx", type: "file", size: 745, desc: "RootLayout do Next.js registrando PWA (PwaRegister), metadados de viewport e fontes.", code: "export default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"pt-BR\">\n      <body><PwaRegister />{children}</body>\n    </html>\n  );\n}" },
+      { path: "academiaflow/src/app/login/", type: "dir", size: 0, desc: "Autenticação." },
+      { path: "academiaflow/src/app/login/page.tsx", type: "file", size: 3215, desc: "Tela de login unificada (Magic Link / Senha Supabase Auth) com redirecionamento baseado em role (admin, trainer, student).", code: "export default function LoginPage() {\n  // Autentica via supabase.auth.signInWithPassword / signInWithOtp\n  return <AuthCard />;\n}" },
+      { path: "academiaflow/src/app/offline/", type: "dir", size: 0, desc: "Fallback offline PWA." },
+      { path: "academiaflow/src/app/offline/page.tsx", type: "file", size: 223, desc: "Página leve exibida pelo Service Worker quando o usuário está sem conexão e acessa rota não cacheada.", code: "export default function OfflinePage() {\n  return <div>Você está offline. Acesse /treino para ver sua ficha salva.</div>;\n}" },
+      { path: "academiaflow/src/app/onboarding/", type: "dir", size: 0, desc: "Jornada de matrícula." },
+      { path: "academiaflow/src/app/onboarding/page.tsx", type: "file", size: 9747, desc: "Wizard completo de onboarding (9.7 KB): cadastro do aluno ou nova academia, escolha de plano, termo LGPD e redirecionamento para checkout.", code: "export default function OnboardingPage() {\n  // Multi-step wizard: Dados -> Plano -> LGPD -> Asaas\n  return <OnboardingWizard />;\n}" },
+      { path: "academiaflow/src/app/pagamento/", type: "dir", size: 0, desc: "Portal de regularização financeira." },
+      { path: "academiaflow/src/app/pagamento/page.tsx", type: "file", size: 2787, desc: "Tela onde o aluno visualiza faturas pendentes, copia código Pix Copia-e-Cola ou abre boleto Asaas.", code: "export default function PagamentoPage() {\n  return <StudentInvoiceCheckout />;\n}" },
+      { path: "academiaflow/src/app/page.tsx", type: "file", size: 2017, desc: "Landing page / dispatcher inicial da aplicação.", code: "export default function HomePage() {\n  return <LandingOrDashboardRedirect />;\n}" },
+      { path: "academiaflow/src/app/qr/", type: "dir", size: 0, desc: "Carteirinha / Passe QR do aluno." },
+      { path: "academiaflow/src/app/qr/page.tsx", type: "file", size: 2385, desc: "Tela otimizada com brilho máximo para leitura rápida do QR Code dinâmico na catraca.", code: "export default function QrPassPage() {\n  // Atualiza token a cada 30s via /api/access/token\n  return <DynamicQrPassCard />;\n}" },
+      { path: "academiaflow/src/app/trainer/", type: "dir", size: 0, desc: "Portal do Personal Trainer." },
+      { path: "academiaflow/src/app/trainer/[id]/", type: "dir", size: 0, desc: "Editor de treino de um aluno específico." },
+      { path: "academiaflow/src/app/trainer/[id]/page.tsx", type: "file", size: 6315, desc: "Interface rica (6.3 KB) para o personal montar divisões de treino (A/B/C), séries, cargas, descanso e observações.", code: "export default function TrainerStudentEditor({ params }: { params: { id: string } }) {\n  return <WorkoutBuilder studentId={params.id} />;\n}" },
+      { path: "academiaflow/src/app/trainer/page.tsx", type: "file", size: 1882, desc: "Lista de alunos vinculados ao instrutor/personal trainer.", code: "export default function TrainerDashboard() {\n  return <AssignedStudentsList />;\n}" },
+      { path: "academiaflow/src/app/treino/", type: "dir", size: 0, desc: "Área principal de treino do aluno." },
+      { path: "academiaflow/src/app/treino/page.tsx", type: "file", size: 5735, desc: "App interativo de execução de treino (5.7 KB) com checklist de séries, cronômetro de descanso e persistência offline.", code: "export default function TreinoPage() {\n  // Salva progresso localmente via lib/offline.ts\n  return <InteractiveWorkoutPlayer />;\n}" },
+      { path: "academiaflow/src/components/", type: "dir", size: 0, desc: "Componentes React reutilizáveis." },
+      { path: "academiaflow/src/components/PushOptIn.tsx", type: "file", size: 2366, desc: "Banner/botão para solicitar permissão de Web Push e salvar PushSubscription no Supabase.", code: "export function PushOptIn() {\n  // Usa navigator.serviceWorker.ready.pushManager.subscribe()\n  return <button>Ativar Lembretes</button>;\n}" },
+      { path: "academiaflow/src/components/PwaRegister.tsx", type: "file", size: 1653, desc: "Componente client-side que registra /sw.js e gerencia atualizações do Service Worker.", code: "export function PwaRegister() {\n  useEffect(() => { navigator.serviceWorker?.register('/sw.js'); }, []);\n  return null;\n}" },
+      { path: "academiaflow/src/lib/", type: "dir", size: 0, desc: "Bibliotecas core, regras de negócio e integrações." },
+      { path: "academiaflow/src/lib/access.ts", type: "file", size: 2243, desc: "Motor central de regras de controle de acesso: verifica adimplência, plano ativo, horário permitido e registra access_logs.", code: "export async function validateStudentAccess(tenantId: string, token: string) {\n  const decoded = verifyAccessToken(token);\n  // Checa status='ACTIVE' e tolerância de inadimplência\n  return { allowed: true, reason: 'OK' };\n}" },
+      { path: "academiaflow/src/lib/accessToken.ts", type: "file", size: 1748, desc: "Geração e verificação criptográfica (HMAC-SHA256) de tokens temporários para QR Code anti-fraude (evita print de tela).", code: "import crypto from 'node:crypto';\nexport function signAccessToken(studentId: string, secret: string) {\n  const window = Math.floor(Date.now() / 30000);\n  return crypto.createHmac('sha256', secret).update(`${studentId}:${window}`).digest('hex').slice(0, 12);\n}" },
+      { path: "academiaflow/src/lib/billing.ts", type: "file", size: 3539, desc: "Orquestrador da régua de cobrança (3.5 KB): identifica faturas D-3, D0 e D+5, aplica bloqueio automático e envia alertas.", code: "export async function runDailyBillingCycle() {\n  // 1. Notifica vencimentos próximos\n  // 2. Bloqueia alunos com atraso > grace_days\n}" },
+      { path: "academiaflow/src/lib/bot.ts", type: "file", size: 2583, desc: "Máquina de estados do Bot de WhatsApp: responde comandos como 'treino', 'boleto', 'pix', 'qr' e 'horário'.", code: "export async function handleWhatsappBotMessage(tenantId: string, payload: any) {\n  const text = payload.text?.toLowerCase();\n  if (text.includes('pix') || text.includes('boleto')) return 'Aqui está seu link Asaas...';\n  if (text.includes('treino')) return 'Acesse seu treino em /treino';\n}" },
+      { path: "academiaflow/src/lib/csv.ts", type: "file", size: 1914, desc: "Parser resiliente de CSV com validação de CPF, telefone e normalização de colunas para importação de alunos.", code: "export function parseStudentsCsv(raw: string) {\n  const [header, ...lines] = raw.trim().split('\\n');\n  return lines.map(line => line.split(','));\n}" },
+      { path: "academiaflow/src/lib/dates.ts", type: "file", size: 785, desc: "Helpers de fuso horário (America/Sao_Paulo) e cálculo de dias de atraso/vencimento.", code: "export function diffDaysFromToday(isoDate: string): number {\n  return Math.floor((Date.now() - new Date(isoDate).getTime()) / 86400000);\n}" },
+      { path: "academiaflow/src/lib/gate.ts", type: "file", size: 1364, desc: "Adaptador de comunicação com hardware/middleware de catraca (TCP/HTTP local e fallback de snapshot).", code: "export async function sendGatePulse(gateIp: string) {\n  return fetch(`http://${gateIp}/open`, { method: 'POST' });\n}" },
+      { path: "academiaflow/src/lib/gateway/", type: "dir", size: 0, desc: "Integrações com gateways de pagamento." },
+      { path: "academiaflow/src/lib/gateway/asaas.ts", type: "file", size: 2374, desc: "Cliente completo da API REST do Asaas (v3): criação de clientes, assinaturas recorrentes, cobranças Pix e validação de assinatura de webhook.", code: "const ASAAS_BASE = 'https://api.asaas.com/v3';\nexport async function createAsaasCustomer(data: any) {\n  return fetch(`${ASAAS_BASE}/customers`, { method: 'POST', body: JSON.stringify(data) });\n}" },
+      { path: "academiaflow/src/lib/notify.ts", type: "file", size: 763, desc: "Dispatcher unificado de notificações (tenta Web Push primeiro e faz fallback para WhatsApp).", code: "export async function notifyStudent(student: any, message: string) {\n  // Envia Push e/ou WhatsApp conforme preferências\n}" },
+      { path: "academiaflow/src/lib/offline.ts", type: "file", size: 1271, desc: "Camada de persistência local (LocalStorage/IndexedDB) para armazenar ficha de treino e fila de check-ins offline.", code: "export function saveWorkoutOffline(workout: any) {\n  localStorage.setItem('af_cached_workout', JSON.stringify(workout));\n}" },
+      { path: "academiaflow/src/lib/push.ts", type: "file", size: 1134, desc: "Wrapper server-side da biblioteca web-push configurado com chaves VAPID.", code: "import webpush from 'web-push';\nexport function sendWebPush(sub: any, payload: string) {\n  return webpush.sendNotification(sub, payload);\n}" },
+      { path: "academiaflow/src/lib/supabase/", type: "dir", size: 0, desc: "Clientes Supabase SSR e Browser." },
+      { path: "academiaflow/src/lib/supabase/client.ts", type: "file", size: 196, desc: "Instância client-side do Supabase usando chave anônima pública.", code: "import { createBrowserClient } from '@supabase/ssr';\nexport const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);" },
+      { path: "academiaflow/src/lib/supabase/server.ts", type: "file", size: 872, desc: "Instância server-side (cookies e Service Role) para API Routes e webhooks sem sessão de usuário.", code: "import { createClient } from '@supabase/supabase-js';\nexport function createAdminClient() {\n  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);\n}" },
+      { path: "academiaflow/src/lib/types.ts", type: "file", size: 328, desc: "Interfaces TypeScript centrais (Tenant, Student, Plan, Workout, AccessLog).", code: "export type StudentStatus = 'ACTIVE' | 'OVERDUE' | 'PAUSED' | 'ANONYMIZED';\nexport interface Student { id: string; tenant_id: string; name: string; status: StudentStatus; }" },
+      { path: "academiaflow/src/lib/whatsapp.ts", type: "file", size: 2053, desc: "Cliente de envio de mensagens de texto e templates via API do WhatsApp.", code: "export async function sendWhatsappMessage(phone: string, text: string) {\n  // Envia mensagem formatada para o número do aluno\n}" },
+      { path: "academiaflow/supabase/", type: "dir", size: 0, desc: "Configurações e migrações do banco PostgreSQL." },
+      { path: "academiaflow/supabase/migrations/", type: "dir", size: 0, desc: "Histórico versionado de schema SQL." },
+      { path: "academiaflow/supabase/migrations/0001_schema_rls.sql", type: "file", size: 6880, desc: "Migration fundacional (6.8 KB): cria tabelas multi-tenant (tenants, students, plans, subscriptions, workouts) e políticas Row Level Security (RLS).", code: "CREATE TABLE tenants (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL);\nCREATE TABLE students (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  tenant_id uuid REFERENCES tenants(id) NOT NULL,\n  full_name text NOT NULL,\n  status text DEFAULT 'ACTIVE'\n);\nALTER TABLE students ENABLE ROW LEVEL SECURITY;\nCREATE POLICY tenant_isolation ON students USING (tenant_id = (auth.jwt() ->> 'tenant_id')::uuid);" },
+      { path: "academiaflow/supabase/migrations/0002_plans_unique.sql", type: "file", size: 160, desc: "Adiciona constraint UNIQUE (tenant_id, name) na tabela de planos para evitar duplicidade.", code: "ALTER TABLE plans ADD CONSTRAINT plans_tenant_name_unique UNIQUE (tenant_id, name);" },
+      { path: "academiaflow/supabase/migrations/0003_workouts_updated_at.sql", type: "file", size: 360, desc: "Cria trigger automático para atualizar updated_at sempre que um personal editar uma ficha de treino.", code: "CREATE TRIGGER set_workouts_updated_at BEFORE UPDATE ON workouts\nFOR EACH ROW EXECUTE FUNCTION moddatetime(updated_at);" },
+      { path: "academiaflow/supabase/migrations/0004_billing_push.sql", type: "file", size: 948, desc: "Adiciona colunas de integração Asaas (asaas_customer_id, asaas_subscription_id) e tabela push_subscriptions.", code: "ALTER TABLE students ADD COLUMN asaas_customer_id text;\nCREATE TABLE push_subscriptions (id uuid PRIMARY KEY, student_id uuid REFERENCES students(id), endpoint text NOT NULL);" },
+      { path: "academiaflow/supabase/migrations/0005_access_control.sql", type: "file", size: 1135, desc: "Cria tabela access_logs e índices otimizados para validação de catraca e auditoria de overrides.", code: "CREATE TABLE access_logs (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  tenant_id uuid REFERENCES tenants(id),\n  student_id uuid REFERENCES students(id),\n  direction text, granted boolean, reason text,\n  created_at timestamptz DEFAULT now()\n);" },
+      { path: "academiaflow/supabase/migrations/0006_kpis.sql", type: "file", size: 1016, desc: "Cria view SQL consolidada (tenant_kpis) para alimentar o dashboard administrativo com métricas em tempo real.", code: "CREATE VIEW tenant_kpis AS\nSELECT tenant_id,\n  COUNT(*) FILTER (WHERE status = 'ACTIVE') AS active_students,\n  COUNT(*) FILTER (WHERE status = 'OVERDUE') AS overdue_students\nFROM students GROUP BY tenant_id;" },
+      { path: "academiaflow/tailwind.config.ts", type: "file", size: 271, desc: "Configuração de conteúdo e tema do Tailwind CSS.", code: "import type { Config } from 'tailwindcss';\nexport default { content: ['./src/**/*.{ts,tsx}'] } satisfies Config;" },
+      { path: "academiaflow/tsconfig.json", type: "file", size: 349, desc: "Configuração TypeScript com path alias @/* -> ./src/*.", code: '{\n  "compilerOptions": { "strict": true, "paths": { "@/*": ["./src/*"] } }\n}' },
+      { path: "academiaflow/vercel.json", type: "file", size: 73, desc: "Agendamento de Cron Job diário na Vercel para o endpoint /api/cron/billing.", code: '{\n  "crons": [{ "path": "/api/cron/billing", "schedule": "0 8 * * *" }]\n}' }
+    ];
+
+    // 2. ARCHITECTURE DETAILS DATASET
+    const archDetails = {
+      "access-control": {
+        title: "Controle de Acesso & Catraca Híbrida (Online + Snapshot Offline)",
+        summary: "Para evitar filas na recepção caso a internet oscile, o AcademiaFlow opera em modo híbrido: o app do aluno gera tokens rotativos a cada 30s (accessToken.ts), enquanto a catraca consulta /api/access/validate/[tenantId] ou valida localmente contra o snapshot baixado via /api/access/snapshot/[tenantId].",
+        files: ["src/app/qr/page.tsx", "src/lib/accessToken.ts", "src/lib/access.ts", "src/lib/gate.ts", "src/app/api/access/validate/[tenantId]/route.ts", "supabase/migrations/0005_access_control.sql"]
+      },
+      "pwa-student": {
+        title: "Portal PWA do Aluno (/treino & /qr)",
+        summary: "Projetado como Progressive Web App instalável (manifest.json + sw.js). O aluno acessa sua ficha de treino prescrita pelo personal mesmo no subsolo da academia sem sinal 4G graças ao cache em lib/offline.ts.",
+        files: ["src/app/treino/page.tsx", "src/app/qr/page.tsx", "src/lib/offline.ts", "public/sw.js", "src/components/PushOptIn.tsx"]
+      },
+      "pwa-admin": {
+        title: "Painéis Operacionais (/admin & /trainer)",
+        summary: "Segregação clara de responsabilidades: gestores acompanham KPIs financeiros e catraca em /admin/*, enquanto professores montam fichas de treino em /trainer/[id] disparando triggers de atualização.",
+        files: ["src/app/admin/page.tsx", "src/app/admin/alunos/page.tsx", "src/app/admin/acesso/page.tsx", "src/app/trainer/[id]/page.tsx", "supabase/migrations/0006_kpis.sql"]
+      },
+      "onboarding-flow": {
+        title: "Onboarding Digital & Conformidade LGPD",
+        summary: "Fluxo self-service de matrícula (/onboarding) com aceite explícito de privacidade (/consent) e mecanismo completo de trancamento (/pause) e anonimização irreversível de dados pessoais (/anonymize).",
+        files: ["src/app/onboarding/page.tsx", "src/app/consent/page.tsx", "src/app/api/students/[id]/anonymize/route.ts", "src/app/api/students/[id]/pause/route.ts"]
+      },
+      "students-billing": {
+        title: "Régua de Cobrança Automatizada & Cron",
+        summary: "O agendador vercel.json aciona /api/cron/billing diariamente. O motor lib/billing.ts verifica vencimentos, envia notificações preventivas e suspende automaticamente o acesso de inadimplentes.",
+        files: ["vercel.json", "src/app/api/cron/billing/route.ts", "src/lib/billing.ts", "src/app/api/subscriptions/route.ts", "src/app/api/payment-link/route.ts"]
+      },
+      "webhooks-hub": {
+        title: "Hub de Webhooks Multi-Tenant",
+        summary: "Rotas parametrizadas por [tenantId] garantem que eventos externos do Asaas e mensagens recebidas no WhatsApp sejam roteados diretamente para o banco isolado da academia correspondente.",
+        files: ["src/app/api/webhooks/payments/[tenantId]/route.ts", "src/app/api/webhooks/whatsapp/[tenantId]/route.ts"]
+      },
+      "asaas-billing": {
+        title: "Integração Financeira Gateway Asaas",
+        summary: "Abstração completa em src/lib/gateway/asaas.ts para criação de clientes, assinaturas recorrentes e links de Pix/Boleto. A confirmação via webhook libera a catraca em segundos.",
+        files: ["src/lib/gateway/asaas.ts", "src/app/pagamento/page.tsx", "supabase/migrations/0004_billing_push.sql"]
+      },
+      "whatsapp-bot": {
+        title: "Bot de Autoatendimento WhatsApp & Web Push",
+        summary: "Reduz a carga da recepção permitindo que alunos solicitem 2ª via de Pix, link de treino e status do plano direto pelo WhatsApp (lib/bot.ts), complementado por notificações Push nativas.",
+        files: ["src/lib/bot.ts", "src/lib/whatsapp.ts", "src/lib/push.ts", "src/lib/notify.ts"]
+      },
+      "supabase-rls": {
+        title: "Persistência PostgreSQL com Row Level Security (RLS)",
+        summary: "Toda tabela possui tenant_id obrigatório e políticas RLS ativas desde a migration 0001, impedindo vazamento de dados entre academias diferentes na mesma instância.",
+        files: ["supabase/migrations/0001_schema_rls.sql", "src/lib/supabase/server.ts", "src/lib/supabase/client.ts"]
+      }
+    };
+
+    // 3. API ENDPOINTS & MIGRATIONS DATA
+    const apiEndpoints = [
+      { method: "POST", path: "/api/access/token", file: "api/access/token/route.ts", cat: "access", desc: "Gera token TOTP temporário (30s) para o QR Code do aluno." },
+      { method: "POST", path: "/api/access/validate/[tenantId]", file: "api/access/validate/[tenantId]/route.ts", cat: "access", desc: "Valida QR Code na catraca e registra log de entrada." },
+      { method: "GET", path: "/api/access/snapshot/[tenantId]", file: "api/access/snapshot/[tenantId]/route.ts", cat: "access", desc: "Baixa lista de tokens ativos para validação offline na catraca." },
+      { method: "POST", path: "/api/access/override", file: "api/access/override/route.ts", cat: "access", desc: "Liberação manual da catraca pelo painel administrativo com auditoria." },
+      { method: "GET", path: "/api/cron/billing", file: "api/cron/billing/route.ts", cat: "billing", desc: "Cron diário (vercel.json) que executa régua de cobrança e bloqueios." },
+      { method: "POST", path: "/api/subscriptions", file: "api/subscriptions/route.ts", cat: "billing", desc: "Cria assinatura recorrente vinculada ao gateway Asaas." },
+      { method: "POST", path: "/api/payment-link", file: "api/payment-link/route.ts", cat: "billing", desc: "Gera link de checkout avulso (Pix/Cartão/Boleto) no Asaas." },
+      { method: "POST", path: "/api/import-students", file: "api/import-students/route.ts", cat: "students", desc: "Importação em lote de alunos via planilha CSV." },
+      { method: "POST", path: "/api/students/[id]/pause", file: "api/students/[id]/pause/route.ts", cat: "students", desc: "Tranca matrícula, pausa cobrança Asaas e suspende catraca." },
+      { method: "POST", path: "/api/students/[id]/anonymize", file: "api/students/[id]/anonymize/route.ts", cat: "students", desc: "Anonimiza dados pessoais do aluno em conformidade com a LGPD." },
+      { method: "POST", path: "/api/webhooks/payments/[tenantId]", file: "api/webhooks/payments/[tenantId]/route.ts", cat: "webhooks", desc: "Recebe notificações de pagamento do Asaas e libera acesso." },
+      { method: "POST", path: "/api/webhooks/whatsapp/[tenantId]", file: "api/webhooks/whatsapp/[tenantId]/route.ts", cat: "webhooks", desc: "Recebe mensagens do WhatsApp e responde via Bot automatizado." }
+    ];
+
+    const migrationsList = [
+      { id: "0001", name: "0001_schema_rls.sql", size: "6.880 B", title: "Schema Core & Políticas RLS", desc: "Cria tenants, profiles, students, plans, subscriptions, workouts e ativa isolamento Row Level Security." },
+      { id: "0002", name: "0002_plans_unique.sql", size: "160 B", title: "Integridade de Planos", desc: "Adiciona índice único composto (tenant_id, name) para impedir planos duplicados na mesma academia." },
+      { id: "0003", name: "0003_workouts_updated_at.sql", size: "360 B", title: "Auditoria de Treinos", desc: "Adiciona trigger SQL para atualizar automaticamente updated_at quando o personal edita uma ficha." },
+      { id: "0004", name: "0004_billing_push.sql", size: "948 B", title: "Asaas IDs & Web Push", desc: "Vincula asaas_customer_id nos alunos e cria tabela push_subscriptions para notificações PWA." },
+      { id: "0005", name: "0005_access_control.sql", size: "1.135 B", title: "Logs de Catraca", desc: "Cria tabela access_logs com índices de performance para auditoria de entradas, bloqueios e overrides." },
+      { id: "0006", name: "0006_kpis.sql", size: "1.016 B", title: "View Analítica de KPIs", desc: "Cria view SQL tenant_kpis agregando alunos ativos, inadimplentes e métricas para o painel admin." }
+    ];
+
+    // =====================================================================
+    // UI & INTERACTION CONTROLLERS
+    // =====================================================================
+
+    function showToast(title, subtitle = "", type = "success") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      const borderColor = type === "success" ? "border-emerald-500/40" : type === "warn" ? "border-amber-500/40" : "border-cyan-500/40";
+      const dotColor = type === "success" ? "bg-emerald-500" : type === "warn" ? "bg-amber-500" : "bg-cyan-500";
+      toast.className = `pointer-events-auto max-w-sm p-3.5 rounded-xl bg-slate-900 text-white border ${borderColor} shadow-xl flex items-start gap-3 transition-all transform translate-y-2 opacity-0`;
+      toast.innerHTML = `
+        <span class="w-2.5 h-2.5 rounded-full ${dotColor} mt-1 shrink-0"></span>
+        <div class="text-xs">
+          <div class="font-bold">${title}</div>
+          ${subtitle ? `<div class="text-slate-400 mt-0.5">${subtitle}</div>` : ""}
+        </div>
+      `;
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+      });
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => toast.remove(), 250);
+      }, 3200);
+    }
+
+    function toggleTheme() {
+      document.documentElement.classList.toggle("dark");
+    }
+
+    function switchMainTab(tabId) {
+      document.querySelectorAll(".tab-section").forEach(sec => sec.classList.add("hidden"));
+      document.getElementById(`tab-${tabId}`).classList.remove("hidden");
+
+      document.querySelectorAll(".main-tab-btn").forEach(btn => {
+        const isActive = btn.dataset.tab === tabId;
+        if (isActive) {
+          btn.className = "main-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm shrink-0";
+        } else {
+          btn.className = "main-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shrink-0";
+        }
+      });
+    }
+
+    // Architecture Diagram Selection
+    function selectArchNode(nodeKey) {
+      const data = archDetails[nodeKey] || archDetails["access-control"];
+      document.getElementById("arch-active-badge").textContent = `Módulo: ${data.title.split("(")[0].trim()}`;
+      const panel = document.getElementById("arch-detail-panel");
+      panel.innerHTML = `
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1.5 max-w-3xl">
+            <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white">${data.title}</h3>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">${data.summary}</p>
+          </div>
+          <div class="shrink-0">
+            <span class="text-[11px] font-mono uppercase text-slate-400 block mb-1.5">Arquivos Relacionados:</span>
+            <div class="flex flex-wrap gap-1.5 max-w-xs">
+              ${data.files.map(f => `<button onclick="openFileInExplorer('academiaflow/${f}')" class="px-2 py-1 rounded text-[11px] font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-emerald-600 dark:text-emerald-400 transition-colors">${f.split('/').pop()}</button>`).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openFileInExplorer(fullPath) {
+      switchMainTab("files");
+      const found = zipEntries.find(e => e.path === fullPath);
+      if (found) inspectFile(found);
+    }
+
+    // File Explorer Rendering & Filtering
+    function renderFileTree(entries) {
+      const container = document.getElementById("file-tree-container");
+      document.getElementById("file-count-label").textContent = `${entries.length} entradas`;
+      container.innerHTML = entries.map((item, idx) => {
+        const depth = Math.max(0, item.path.replace(/\/$/, "").split("/").length - 2);
+        const padLeft = 12 + depth * 14;
+        const name = item.type === "dir"
+          ? item.path.replace(/\/$/, "").split("/").pop() + "/"
+          : item.path.split("/").pop();
+        const isDir = item.type === "dir";
+        return `
+          <button onclick='inspectFileByPath("${item.path}")' style="padding-left: ${padLeft}px" class="w-full text-left py-2 pr-3 flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors ${isDir ? 'text-slate-500 dark:text-slate-400' : 'text-slate-800 dark:text-slate-200 font-medium'}">
+            <span class="flex items-center gap-2 truncate">
+              ${isDir
+                ? `<svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>`
+                : `<svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`
+              }
+              <span class="truncate">${name}</span>
+            </span>
+            ${!isDir ? `<span class="text-[10px] text-slate-400 shrink-0">${item.size} B</span>` : ""}
+          </button>
+        `;
+      }).join("");
+    }
+
+    function filterFiles() {
+      const q = document.getElementById("file-search-input").value.toLowerCase();
+      const ext = document.getElementById("file-ext-filter").value;
+      const filtered = zipEntries.filter(item => {
+        const matchesQuery = item.path.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+        if (ext === "all") return true;
+        if (item.type === "dir") return false;
+        if (ext === "other") {
+          return ![".tsx", ".ts", ".sql", ".js", ".mjs", ".json"].some(e => item.path.endsWith(e));
+        }
+        if (ext === ".js") return item.path.endsWith(".js") || item.path.endsWith(".mjs");
+        return item.path.endsWith(ext);
+      });
+      renderFileTree(filtered);
+    }
+
+    function inspectFileByPath(path) {
+      const item = zipEntries.find(e => e.path === path);
+      if (item) inspectFile(item);
+    }
+
+    function inspectFile(item) {
+      document.getElementById("inspector-filename").textContent = item.path;
+      const ext = item.type === "dir" ? "DIR" : (item.path.split(".").pop() || "FILE").toUpperCase();
+      document.getElementById("inspector-badge").textContent = ext;
+      document.getElementById("inspector-size").textContent = item.type === "dir"
+        ? "Diretório estrutural do pacote ZIP"
+        : `Tamanho original: ${item.size.toLocaleString("pt-BR")} bytes`;
+      document.getElementById("inspector-desc").textContent = item.desc;
+      document.getElementById("inspector-code").textContent = item.code || `// Diretório: ${item.path}\n// Contém sub-módulos e rotas do projeto AcademiaFlow.`;
+
+      const relContainer = document.getElementById("inspector-relations");
+      const tags = [];
+      if (item.path.includes("access") || item.path.includes("qr") || item.path.includes("gate")) tags.push("Controle de Catraca", "HMAC Token");
+      if (item.path.includes("asaas") || item.path.includes("billing") || item.path.includes("pagamento")) tags.push("Gateway Asaas", "Régua Financeira");
+      if (item.path.includes("whatsapp") || item.path.includes("bot")) tags.push("WhatsApp Bot", "Webhooks");
+      if (item.path.includes("supabase") || item.path.includes(".sql")) tags.push("PostgreSQL", "Row Level Security");
+      if (item.path.includes("sw.js") || item.path.includes("offline") || item.path.includes("manifest")) tags.push("PWA Offline-First");
+      if (tags.length === 0) tags.push("Next.js App Router", "Multi-Tenant");
+
+      relContainer.innerHTML = tags.map(t => `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${t}</span>`).join("");
+    }
+
+    function copyInspectorCode() {
+      const code = document.getElementById("inspector-code").textContent;
+      const ta = document.createElement("textarea");
+      ta.value = code;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      showToast("Código copiado para a área de transferência!");
+    }
+
+    // =====================================================================
+    // SIMULATOR INTERACTIVITY
+    // =====================================================================
+    let simOffline = false;
+    let qrSeconds = 30;
+    let studentExercises = [
+      { id: 1, name: "Supino Reto com Barra", sets: "4x10 • 60kg", done: true },
+      { id: 2, name: "Supino Inclinado Halteres", sets: "3x12 • 22kg", done: false },
+      { id: 3, name: "Crucifixo na Polia Alta", sets: "3x15 • 15kg", done: false },
+      { id: 4, name: "Tríceps Corda no Pulley", sets: "4x12 • 25kg", done: false }
+    ];
+
+    let adminStudents = [
+      { id: "st_01", name: "Ana Beatriz Souza", plan: "Mensal • R$ 129,90", status: "ACTIVE" },
+      { id: "st_02", name: "Carlos Eduardo Lima", plan: "Trimestral • R$ 349,00", status: "OVERDUE" },
+      { id: "st_03", name: "Fernanda Rocha", plan: "Anual VIP • R$ 1.190,00", status: "PAUSED" }
+    ];
+
+    let gateLogs = [
+      { time: "12:34", name: "Ana Beatriz Souza", method: "QR Token", granted: true },
+      { time: "12:29", name: "Carlos Eduardo Lima", method: "QR Token (Bloq. Asaas)", granted: false },
+      { time: "12:15", name: "Rafael Martins", method: "Snapshot Offline", granted: true }
+    ];
+
+    let trainerWorkouts = [
+      { name: "Agachamento Livre", sets: "4x10 • Descanso 90s" },
+      { name: "Leg Press 45°", sets: "4x12 • Descanso 60s" },
+      { name: "Cadeira Extensora", sets: "3x15 • Drop-set na última" }
+    ];
+
+    function switchSimScreen(screen) {
+      document.querySelectorAll(".sim-screen").forEach(el => el.classList.add("hidden"));
+      document.getElementById(`sim-screen-${screen}`).classList.remove("hidden");
+
+      const urls = {
+        student: "https://app.academiaflow.com.br/treino",
+        admin: "https://app.academiaflow.com.br/admin",
+        trainer: "https://app.academiaflow.com.br/trainer/usr_9821a",
+        onboarding: "https://app.academiaflow.com.br/onboarding"
+      };
+      document.getElementById("sim-url-bar").textContent = urls[screen];
+
+      document.querySelectorAll(".sim-btn").forEach(btn => {
+        if (btn.dataset.sim === screen) {
+          btn.className = "sim-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-md shadow-emerald-600/20 transition-all";
+        } else {
+          btn.className = "sim-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition-all";
+        }
+      });
+    }
+
+    function toggleSimOffline() {
+      simOffline = !simOffline;
+      const btn = document.getElementById("sim-offline-toggle");
+      if (simOffline) {
+        btn.className = "px-2.5 py-1 rounded-lg text-[11px] font-mono bg-amber-500/15 text-amber-500 border border-amber-500/30";
+        btn.textContent = "○ Modo Offline (sw.js ativo)";
+        showToast("Modo Offline Simulado", "Treinos e QR Token continuam operando via cache local.", "warn");
+      } else {
+        btn.className = "px-2.5 py-1 rounded-lg text-[11px] font-mono bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
+        btn.textContent = "● Online (SW Ativo)";
+        showToast("Conexão Restabelecida", "Fila offline sincronizada com Supabase.");
+      }
+    }
+
+    function generateQrSvgPattern() {
+      const svg = document.getElementById("dynamic-qr-svg");
+      let rects = `
+        <rect x="8" y="8" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+        <rect x="14" y="14" width="12" height="12"/>
+        <rect x="68" y="8" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+        <rect x="74" y="14" width="12" height="12"/>
+        <rect x="8" y="68" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+        <rect x="14" y="74" width="12" height="12"/>
+      `;
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          if ((r < 4 && c < 4) || (r < 4 && c > 4) || (r > 4 && c < 4)) continue;
+          if (Math.random() > 0.45) {
+            rects += `<rect x="${10 + c * 9}" y="${10 + r * 9}" width="6" height="6" rx="1"/>`;
+          }
+        }
+      }
+      svg.innerHTML = rects;
+    }
+
+    function regenerateQrToken() {
+      qrSeconds = 30;
+      const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const num = Math.floor(1000 + Math.random() * 9000);
+      document.getElementById("qr-token-code").textContent = `AF-${num}-${rand}`;
+      generateQrSvgPattern();
+    }
+
+    function simulateGatePass() {
+      const token = document.getElementById("qr-token-code").textContent;
+      showToast("Catraca Liberada! (200 OK)", `POST /api/access/validate/tenant_01 • Token ${token} validado.`);
+      gateLogs.unshift({ time: "Agora", name: "Aluno Simulado (Você)", method: "QR Token", granted: true });
+      renderGateLogs();
+    }
+
+    function renderStudentExercises() {
+      const list = document.getElementById("student-exercises-list");
+      const doneCount = studentExercises.filter(e => e.done).length;
+      document.getElementById("workout-progress-pill").textContent = `${doneCount}/${studentExercises.length} Concluídos`;
+
+      list.innerHTML = studentExercises.map(ex => `
+        <div onclick="toggleStudentEx(${ex.id})" class="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${ex.done ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-cyan-500/40'}">
+          <div class="flex items-center gap-3">
+            <div class="w-5 h-5 rounded-md flex items-center justify-center border ${ex.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-400'}">
+              ${ex.done ? `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>` : ""}
+            </div>
+            <div>
+              <div class="text-xs sm:text-sm font-semibold ${ex.done ? 'line-through text-slate-400' : ''}">${ex.name}</div>
+              <div class="text-[11px] font-mono text-slate-500">${ex.sets}</div>
+            </div>
+          </div>
+          <span class="text-[11px] font-mono ${ex.done ? 'text-emerald-500' : 'text-slate-400'}">${ex.done ? 'Feito' : 'Marcar'}</span>
+        </div>
+      `).join("");
+    }
+
+    function toggleStudentEx(id) {
+      const ex = studentExercises.find(e => e.id === id);
+      if (ex) ex.done = !ex.done;
+      renderStudentExercises();
+    }
+
+    function finishWorkoutSession() {
+      showToast("Treino Registrado!", "Check-in salvo e progresso enviado ao Personal Trainer.");
+    }
+
+    function renderAdminStudents() {
+      const tbody = document.getElementById("admin-students-tbody");
+      tbody.innerHTML = adminStudents.map(st => {
+        const badge = st.status === "ACTIVE"
+          ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-500">ATIVO</span>`
+          : st.status === "OVERDUE"
+          ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-500">INADIMPLENTE</span>`
+          : st.status === "PAUSED"
+          ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-500">PAUSADO</span>`
+          : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/20 text-slate-400">ANONIMIZADO</span>`;
+
+        return `
+          <tr>
+            <td class="py-3 font-medium">${st.name}</td>
+            <td class="py-3 text-slate-500 font-mono">${st.plan}</td>
+            <td class="py-3">${badge}</td>
+            <td class="py-3 text-right space-x-1">
+              ${st.status !== "ANONYMIZED" ? `
+                <button onclick="togglePauseStudent('${st.id}')" class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-amber-500/20 text-[11px]">
+                  ${st.status === "PAUSED" ? "Reativar" : "Pausar"}
+                </button>
+                <button onclick="anonymizeStudent('${st.id}')" class="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-[11px]">
+                  LGPD
+                </button>
+              ` : `<span class="text-[10px] text-slate-400 font-mono">PII Removido</span>`}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function togglePauseStudent(id) {
+      const st = adminStudents.find(s => s.id === id);
+      if (!st) return;
+      st.status = st.status === "PAUSED" ? "ACTIVE" : "PAUSED";
+      renderAdminStudents();
+      showToast(`Matrícula ${st.status === "PAUSED" ? "Pausada" : "Reativada"}`, `POST /api/students/${id}/pause executado.`);
+    }
+
+    function anonymizeStudent(id) {
+      const st = adminStudents.find(s => s.id === id);
+      if (!st) return;
+      st.name = `Anonimizado #${id.slice(-2)}`;
+      st.status = "ANONYMIZED";
+      renderAdminStudents();
+      showToast("Anonimização LGPD Concluída", `POST /api/students/${id}/anonymize • PII removido permanentemente.`, "warn");
+    }
+
+    function simulateCsvImport() {
+      adminStudents.push({ id: "st_04", name: "João Silva (CSV)", plan: "Mensal • R$ 129,90", status: "ACTIVE" });
+      renderAdminStudents();
+      showToast("Importação CSV Concluída", "POST /api/import-students • Alunos adicionados com sucesso.");
+    }
+
+    function renderGateLogs() {
+      const feed = document.getElementById("gate-logs-feed");
+      feed.innerHTML = gateLogs.map(log => `
+        <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+          <div>
+            <div class="font-semibold">${log.name}</div>
+            <div class="text-[11px] font-mono text-slate-500">${log.time} • ${log.method}</div>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold ${log.granted ? 'bg-emerald-500/15 text-emerald-500' : 'bg-rose-500/15 text-rose-500'}">
+            ${log.granted ? 'LIBERADO' : 'BLOQUEADO'}
+          </span>
+        </div>
+      `).join("");
+    }
+
+    function triggerManualGateOverride() {
+      gateLogs.unshift({ time: "Agora", name: "Visitante / Liberação Recepção", method: "Manual Override", granted: true });
+      renderGateLogs();
+      const el = document.getElementById("kpi-gate-entries");
+      el.textContent = Number(el.textContent) + 1;
+      showToast("Catraca Liberada Manualmente", "POST /api/access/override registrado no log de auditoria.", "warn");
+    }
+
+    function renderTrainerWorkouts() {
+      const container = document.getElementById("trainer-workout-list");
+      container.innerHTML = trainerWorkouts.map((w, idx) => `
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-sm">${w.name}</span>
+            <span class="block font-mono text-slate-500 mt-0.5">${w.sets}</span>
+          </div>
+          <button onclick="removeTrainerExercise(${idx})" class="text-rose-500 hover:underline font-mono">Remover</button>
+        </div>
+      `).join("");
+    }
+
+    function addTrainerExercise() {
+      const nameInput = document.getElementById("new-ex-name");
+      const setsInput = document.getElementById("new-ex-sets");
+      if (!nameInput.value.trim()) return;
+      trainerWorkouts.push({ name: nameInput.value.trim(), sets: setsInput.value.trim() || "3x12" });
+      nameInput.value = "";
+      setsInput.value = "";
+      renderTrainerWorkouts();
+      showToast("Ficha Atualizada", "Trigger 0003_workouts_updated_at acionado.");
+    }
+
+    function removeTrainerExercise(idx) {
+      trainerWorkouts.splice(idx, 1);
+      renderTrainerWorkouts();
+    }
+
+    function completeOnboardingFlow() {
+      const checked = document.getElementById("onb-lgpd-check").checked;
+      if (!checked) {
+        showToast("Consentimento Obrigatório", "É necessário aceitar o termo LGPD (/consent) antes do pagamento.", "warn");
+        return;
+      }
+      const name = document.getElementById("onb-name").value || "Novo Aluno";
+      showToast("Assinatura Asaas Criada!", `Checkout Pix gerado para ${name} via /api/subscriptions.`);
+    }
+
+    // =====================================================================
+    // API TABLE & MIGRATIONS RENDERING
+    // =====================================================================
+    function renderApiTable(cat = "all") {
+      const tbody = document.getElementById("api-endpoints-tbody");
+      const list = cat === "all" ? apiEndpoints : apiEndpoints.filter(a => a.cat === cat);
+      tbody.innerHTML = list.map(ep => {
+        const methodBadge = ep.method === "GET"
+          ? "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400"
+          : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+        return `
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+            <td class="py-3 pr-3"><span class="px-2 py-0.5 rounded font-mono font-bold text-[11px] ${methodBadge}">${ep.method}</span></td>
+            <td class="py-3 pr-3 font-mono font-semibold text-slate-800 dark:text-slate-200">${ep.path}</td>
+            <td class="py-3 pr-3 font-mono text-slate-400">${ep.file}</td>
+            <td class="py-3 text-slate-600 dark:text-slate-300">${ep.desc}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function filterApiCategory(cat) {
+      document.querySelectorAll(".api-cat-btn").forEach(btn => {
+        btn.className = "api-cat-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400";
+      });
+      event.target.className = "api-cat-btn px-3 py-1 rounded-lg text-xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+      renderApiTable(cat);
+    }
+
+    function renderMigrations() {
+      const grid = document.getElementById("migrations-grid");
+      grid.innerHTML = migrationsList.map(m => `
+        <div onclick="openFileInExplorer('academiaflow/supabase/migrations/${m.name}')" class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500 cursor-pointer transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">Migration #${m.id}</span>
+              <span class="text-xs font-mono text-slate-400">${m.size}</span>
+            </div>
+            <h3 class="font-bold text-sm mb-1">${m.title}</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">${m.desc}</p>
+          </div>
+          <div class="text-[11px] font-mono text-emerald-500 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+            <span>${m.name}</span>
+            <span>Ver SQL →</span>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // Initialize Everything on Load
+    window.addEventListener("DOMContentLoaded", () => {
+      selectArchNode("access-control");
+      renderFileTree(zipEntries);
+      inspectFile(zipEntries.find(e => e.path.endsWith("0001_schema_rls.sql")));
+      generateQrSvgPattern();
+      renderStudentExercises();
+      renderAdminStudents();
+      renderGateLogs();
+      renderTrainerWorkouts();
+      renderApiTable("all");
+      renderMigrations();
+
+      // Dynamic QR Countdown Loop
+      setInterval(() => {
+        qrSeconds--;
+        if (qrSeconds <= 0) {
+          regenerateQrToken();
+        }
+        document.getElementById("qr-timer").textContent = qrSeconds;
+        document.getElementById("qr-progress-bar").style.width = `${(qrSeconds / 30) * 100}%`;
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
